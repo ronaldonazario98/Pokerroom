@@ -1,0 +1,1915 @@
+
+
+
+
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JetDraw</title>
+<!-- For production, use Tailwind via CLI/PostCSS -->
+<script src="https://cdn.tailwindcss.com">
+// Added missing modal handler functions
+function confirmNewList() {
+  // Implement your logic for creating a new list here
+  closeNewListModal();
+}
+function closeNewListModal() {
+  document.getElementById('newListModal').style.display = 'none';
+}
+function confirmTableChange() {
+  // Implement your logic for adding table change request here
+  closeTableChangeModal();
+}
+function closeTableChangeModal() {
+  document.getElementById('tableChangeModal').style.display = 'none';
+}
+
+
+function openTableChangeModal() {
+  document.getElementById("tableChangeEntryModal").style.display = "flex";
+}
+function closeTableChangeModal() {
+  document.getElementById("tableChangeEntryModal").style.display = "none";
+}
+function updateToOptions() {
+  const fromVal = document.getElementById("changeFromSelect").value;
+  const toSelect = document.getElementById("changeToSelect");
+  const all = ["T1", "T2", "T3", "T4", "T5", "T6"];
+  toSelect.innerHTML = '<option value="">Select Table</option>' +
+    all.filter(t => t !== fromVal).map(t => `<option value="${t}">${t}</option>`).join("");
+}
+function confirmTableChangeEntry() {
+  const name = document.getElementById("changePlayerInput").value.trim();
+  const from = document.getElementById("changeFromSelect").value;
+  const to = document.getElementById("changeToSelect").value;
+  if (!name || !from || !to) {
+    alert("All fields are required.");
+    return;
+  }
+  const changes = JSON.parse(localStorage.getItem("tableChanges")) || [];
+  changes.push({ name, from, to });
+  localStorage.setItem("tableChanges", JSON.stringify(changes));
+  closeTableChangeModal();
+  renderWaitingListCards();
+  updateDisplayWindow(); // keep external window updated
+}
+
+
+function reorderPlayerPrompt(playerName, tableName) {
+  const newPos = prompt("Enter new position in the list (1 = top):");
+  const pos = parseInt(newPos);
+  if (!isNaN(pos) && pos > 0) {
+    reorderPlayer(playerName, tableName, pos - 1); // Convert to 0-based index
+  }
+}
+
+function reorderPlayer(playerName, tableName, newIndex) {
+  const list = waitingListData[tableName] || [];
+  const currentIndex = list.findIndex(p => p.name === playerName);
+  if (currentIndex === -1 || newIndex >= list.length) return;
+  const [player] = list.splice(currentIndex, 1);
+  list.splice(newIndex, 0, player);
+  saveWaitingListData();
+  renderWaitingListCards();
+  updateDisplayWindow();
+}
+
+
+
+
+function handleToggleActionMenu(event, iconElement) {
+  event.stopPropagation();
+  // Close all open menus first
+  document.querySelectorAll(".action-menu").forEach(menu => menu.classList.add("hidden"));
+  const menu = iconElement.parentElement.querySelector(".action-menu");
+  if (menu) {
+    menu.classList.toggle("hidden");
+  }
+}
+
+// Strict global click listener: close all action menus on any outside click
+document.addEventListener("click", function () {
+  document.querySelectorAll(".action-menu").forEach(menu => {
+    menu.classList.add("hidden");
+  });
+});
+
+});
+
+});
+
+</script>
+<script>
+// Added missing filter handler
+function filterWaitingListByType() {
+  renderWaitingListCards();
+}
+
+// Added missing modal handler functions
+function confirmNewList() {
+  // Implement your logic for creating a new list here
+  closeNewListModal();
+}
+function closeNewListModal() {
+  document.getElementById('newListModal').style.display = 'none';
+}
+function confirmTableChange() {
+  // Implement your logic for adding table change request here
+  closeTableChangeModal();
+}
+function closeTableChangeModal() {
+  document.getElementById('tableChangeModal').style.display = 'none';
+}
+
+
+function openTableChangeModal() {
+  document.getElementById("tableChangeEntryModal").style.display = "flex";
+}
+function closeTableChangeModal() {
+  document.getElementById("tableChangeEntryModal").style.display = "none";
+}
+function updateToOptions() {
+  const fromVal = document.getElementById("changeFromSelect").value;
+  const toSelect = document.getElementById("changeToSelect");
+  const all = ["T1", "T2", "T3", "T4", "T5", "T6"];
+  toSelect.innerHTML = '<option value="">Select Table</option>' +
+    all.filter(t => t !== fromVal).map(t => `<option value="${t}">${t}</option>`).join("");
+}
+function confirmTableChangeEntry() {
+  const name = document.getElementById("changePlayerInput").value.trim();
+  const from = document.getElementById("changeFromSelect").value;
+  const to = document.getElementById("changeToSelect").value;
+  if (!name || !from || !to) {
+    alert("All fields are required.");
+    return;
+  }
+  const changes = JSON.parse(localStorage.getItem("tableChanges")) || [];
+  changes.push({ name, from, to });
+  localStorage.setItem("tableChanges", JSON.stringify(changes));
+  closeTableChangeModal();
+  renderWaitingListCards();
+  updateDisplayWindow(); // keep external window updated
+}
+
+
+function reorderPlayerPrompt(playerName, tableName) {
+  const newPos = prompt("Enter new position in the list (1 = top):");
+  const pos = parseInt(newPos);
+  if (!isNaN(pos) && pos > 0) {
+    reorderPlayer(playerName, tableName, pos - 1); // Convert to 0-based index
+  }
+}
+
+function reorderPlayer(playerName, tableName, newIndex) {
+  const list = waitingListData[tableName] || [];
+  const currentIndex = list.findIndex(p => p.name === playerName);
+  if (currentIndex === -1 || newIndex >= list.length) return;
+  const [player] = list.splice(currentIndex, 1);
+  list.splice(newIndex, 0, player);
+  saveWaitingListData();
+  renderWaitingListCards();
+  updateDisplayWindow();
+}
+
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+<style>
+    /* Shared Styles */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .nav-bar {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .nav-item {
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .nav-item.active {
+      background-color: #e5e7eb;
+      font-weight: bold;
+    }
+    .tab {
+      display: none;
+    }
+    .tab.active {
+      display: block;
+    }
+    /* Updated Draw Menu: Use Grid to display 5 cards per row */
+    #drawContent {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+      overflow: visible;
+    }
+    .draw-card {
+      border: 2px solid #ccc;
+      border-radius: 0.5rem;
+      background-color: #fff;
+      padding: 0.75rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      width: 100%;
+    }
+    @media (max-width: 1200px) {
+      #drawContent {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      #drawContent {
+        grid-template-columns: repeat(1, 1fr);
+      }
+    }
+    .card-header {
+      background-color: #f0f0f0;
+      padding: 0.3rem;
+      border-radius: 0.5rem 0.5rem 0 0;
+      font-family: sans-serif;
+      font-size: 0.9rem;
+      text-align: center;
+      margin: -0.75rem -0.75rem 0.6rem -0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .closed-label {
+      background-color: #f87171;
+      color: white;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-left: 0.3rem;
+    }
+    .fancy-player-box {
+      display: inline-block;
+      padding: 0.2rem 0.4rem;
+      margin: 0.15rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      cursor: move;
+      box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      font-size: 0.8rem;
+    }
+    .waiting-player {
+      color: red;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .new-waiting {
+      color: orange;
+      font-weight: bold;
+    }
+    .list-count-link {
+      text-decoration: underline;
+      color: blue;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .closed-card {
+      background-color: #d1d5db !important;
+      opacity: 0.7;
+    }
+    .closed-card button {
+      pointer-events: none;
+      opacity: 0.5;
+    }
+    .btn-apple {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      border-radius: 0.4rem;
+      font-weight: 500;
+    }
+    .default-table-new-player {
+      color: purple;
+      font-weight: normal;
+    }
+    .waiting-list-new-player {
+      color: orange;
+    }
+    /* Waiting List Manager Cards: Use grid so all cards are squeezed on one row */
+    #waitingListCards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.5rem;
+    }
+    .waiting-card {
+      border: 2px solid #ccc;
+      border-radius: 0.5rem;
+      background-color: #fff;
+      padding: 0.75rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .waiting-entry {
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 0.5rem;
+      background-color: #f9f9f9;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      position: relative;
+    }
+    .waiting-entry:hover {
+      background-color: #f0f0f0;
+    }
+    .entry-actions {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background-color: rgba(255,255,255,0.95);
+      padding: 0.5rem;
+      border-bottom: 1px solid #ccc;
+      border-radius: 0.5rem 0.5rem 0 0;
+      gap: 0.5rem;
+    }
+    .entry-actions button {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.7rem;
+      border-radius: 0.3rem;
+      border: 1px solid #ccc;
+      background-color: #e0e0e0;
+    }
+    .delay-highlight {
+      background-color: yellow;
+    }
+    .time-remaining {
+      font-size: 0.75rem;
+      color: #666;
+      margin-left: 0.5rem;
+    }
+    .time-warning {
+      color: #ff6b00;
+    }
+    .time-critical {
+      color: #ff0000;
+      font-weight: bold;
+    }
+    /* For WLM: Red background if remaining <=5, yellow if delayed */
+    .time-low {
+      background-color: #ffcccc !important;
+    }
+    .time-delayed {
+      background-color: #ffffcc !important;
+    }
+    .reg-type-icon {
+      cursor: pointer;
+    }
+    
+.entry-red {
+  background-color: #ffe5e5 !important;
+}
+.entry-yellow {
+  background-color: #fffacc !important;
+}
+.entry-green {
+  background-color: #e3ffe5 !important;
+}
+
+
+/* Edit Modal Styles */
+    #editRegTypeModal,
+    #editWaitingModal,
+    #regTypeModal,
+    #addTableModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .edit-reg-modal-content,
+    .edit-waiting-modal-content,
+    .modal-content,
+    .add-table-modal-content {
+      background-color: white;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    /* NEW: Add Table Modal for Table Management */
+    #addTableModal .modal-content {
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+<!-- Nav Bar -->
+<nav class="nav-bar flex justify-around fixed top-0 w-full z-10">
+<div class="nav-item" onclick="showTab('tablesTab')">Table Management</div>
+<div class="nav-item" onclick="showTab('playersTab')">Players List</div>
+<div class="nav-item" onclick="showTab('drawTab')">Draw</div>
+<div class="nav-item" onclick="showTab('lobbyTab')">Lobby</div>
+<div class="nav-item" onclick="showTab('waitingListManagerTab')">Waiting List Manager</div>
+</nav>
+<div class="pt-16 w-full mx-auto p-6">
+<!-- Table Management Section -->
+<section class="tab" id="tablesTab">
+<h1 class="text-3xl font-bold mb-6">🪑 Table Management</h1>
+<!-- Remove inline add table inputs; add button now opens modal -->
+<button class="bg-blue-500 text-white px-3 py-1 rounded btn-apple hover:bg-blue-600 mb-4" onclick="openAddTableModal()">Add Table</button>
+<div class="space-y-4" id="tableList"></div>
+</section>
+<!-- Players List Section -->
+<section class="tab" id="playersTab">
+<h1 class="text-3xl font-bold mb-4">👥 Players List</h1>
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6" id="tableSummary"></div>
+<div class="flex justify-between items-center mb-4">
+<div class="flex gap-4 flex-1">
+<input class="flex-1 px-4 py-2 border rounded-md" id="playerName" onkeydown="handleKey(event)" placeholder="Enter player name" type="text"/>
+<button class="bg-blue-500 text-white px-3 py-1 rounded btn-apple hover:bg-blue-600" onclick="addPlayer()">Add Player</button>
+</div>
+<div class="flex items-center ml-4">
+<input class="px-2 py-1 border rounded w-32" id="searchInput" oninput="renderPlayers()" placeholder="🔍 Search" type="text"/>
+<button class="bg-red-500 text-white px-3 py-1 rounded btn-apple hover:bg-red-600 ml-2" onclick="resetPlayers()">Reset</button>
+</div>
+</div>
+<div class="flex gap-2 mb-4 flex-wrap" id="quickButtons"></div>
+<div class="space-y-4" id="playerList"></div>
+</section>
+<!-- Draw Section -->
+<section class="tab" id="drawTab">
+<h1 class="text-3xl font-bold mb-6">🎲 Draw</h1>
+<div class="flex justify-between mb-4">
+<div class="flex items-center gap-4">
+<input class="px-4 py-2 border rounded w-64" id="drawSearch" oninput="searchDraw()" placeholder="🔍 Search in draw..." type="text"/>
+</div>
+<div class="flex gap-4">
+<button class="bg-red-500 text-white px-3 py-1 rounded btn-apple hover:bg-red-700" onclick="resetDraw()">Reset Draw</button>
+</div>
+</div>
+<div id="drawContent">
+<!-- Global Draw Card will be rendered here -->
+</div>
+</section>
+<!-- Lobby Section -->
+<section class="tab" id="lobbyTab">
+<h1 class="text-3xl font-bold mb-6">📺 Lobby</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="lobbyContent"></div>
+</section>
+<!-- Waiting List Manager Section -->
+<section class="tab" id="waitingListManagerTab">
+<div class="flex items-center gap-4 mb-2">
+<button class="bg-green-500 text-white px-3 py-1 rounded btn-apple hover:bg-green-600" onclick="startWaitingListManager()">Start</button>
+<button class="bg-red-500 text-white px-3 py-1 rounded btn-apple hover:bg-red-600" onclick="resetWaitingListManager()">Reset</button>
+<button class="bg-yellow-500 text-white px-3 py-1 rounded btn-apple hover:bg-yellow-600 hidden" id="undoBtn" onclick="undoResetWaitingList()">Undo</button>
+<select class="px-2 py-1 border rounded btn-apple" id="waitingListFilter" onchange="filterWaitingListByType()">
+<option value="all">All</option>
+<option value="inperson">👤 In Person</option>
+<option value="called">📞 Called</option>
+<option value="sms">💬 SMS</option>
+</select>
+<button class="bg-blue-500 text-white px-3 py-1 rounded btn-apple hover:bg-blue-700" onclick="displayWaitingList()">Display</button>
+<div class="flex items-center gap-1">
+<label class="text-sm" for="defaultExpiration">Expire (min):</label>
+<input class="w-16 px-2 py-1 border rounded" id="defaultExpiration" min="1" type="number" value="120"/>
+</div>
+</div>
+<div class="flex justify-between items-center mb-4">
+<div class="flex gap-4 flex-1">
+<input class="flex-1 px-4 py-2 border rounded-md" id="waitingListInput" onblur="this.value = this.value.toUpperCase()" onkeydown="handleWaitingListKey(event)" placeholder="Enter player name..." type="text"/>
+<button class="bg-blue-500 text-white px-3 py-1 rounded btn-apple hover:bg-blue-600" onclick="insertWaitingListPlayer()">Insert</button>
+</div>
+<div class="ml-4">
+<input class="px-2 py-1 border rounded w-32" id="waitingListSearch" oninput="searchWaitingList()" placeholder="🔍 Search..." type="text"/>
+</div>
+</div>
+<div class="flex gap-2 mb-4 flex-wrap" id="waitingListQuickButtons"></div>
+<div id="waitingListCards">
+<!-- Waiting list cards will be rendered here -->
+</div>
+</section>
+</div>
+<!-- Modal for Players List -->
+<div class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" id="modal">
+<div class="bg-white rounded-lg max-w-2xl w-full p-6 relative max-h-[80vh] overflow-y-auto" id="modalContent">
+<button class="absolute top-2 right-4 text-gray-600 text-xl font-bold hover:text-black" onclick="closeModal()">×</button>
+<h2 class="text-2xl font-semibold mb-4" id="modalTitle"></h2>
+<ul class="list-decimal list-inside text-lg space-y-1" id="modalList"></ul>
+</div>
+</div>
+<!-- Edit Waiting List Entry Modal -->
+<div id="editWaitingModal">
+<div class="edit-waiting-modal-content">
+<span class="modal-close" onclick="closeEditWaitingModal()">×</span>
+<h2 class="text-xl font-semibold mb-4">Edit Registration</h2>
+<div>
+<label class="block mb-1">Name:</label>
+<input class="w-full border rounded px-2 py-1" id="editWaitingName" type="text"/>
+</div>
+<div class="mt-3">
+<label class="block mb-1">Registration Type:</label>
+<div>
+<label><input name="editRegType" type="radio" value="inperson"/> 👤 In Person</label>
+<label class="ml-4"><input name="editRegType" type="radio" value="called"/> 📞 Called</label>
+<label class="ml-4"><input name="editRegType" type="radio" value="sms"/> 💬 SMS</label>
+</div>
+</div>
+<div class="mt-3" id="editTimeContainer" style="display:none;">
+<label class="block mb-1">Time (e.g., 4:20 PM):</label>
+<input class="w-full border rounded px-2 py-1" id="editWaitingTime" type="text"/>
+</div>
+<div class="mt-4 flex justify-end gap-2">
+<button class="px-3 py-1 bg-gray-200 rounded" onclick="closeEditWaitingModal()">Cancel</button>
+<button class="px-3 py-1 bg-blue-500 text-white rounded" onclick="saveEditWaiting()">Save</button>
+</div>
+</div>
+</div>
+<!-- Registration Type Selection Modal for WLM -->
+<div class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" id="regTypeModal">
+<div class="modal-content bg-white rounded-lg max-w-md w-full p-6 relative">
+<span class="modal-close" onclick="closeRegTypeModal()">×</span>
+<h2 class="text-xl font-semibold mb-4">Select Registration Type</h2>
+<div id="regTypeOptions">
+<button class="w-full text-left px-4 py-2 border rounded mb-2" onclick="selectRegType('inperson')">👤 In Person</button>
+<button class="w-full text-left px-4 py-2 border rounded mb-2" onclick="selectRegType('called')">📞 Called</button>
+<button class="w-full text-left px-4 py-2 border rounded mb-2" onclick="selectRegType('sms')">💬 SMS</button>
+</div>
+<div class="mt-3" id="regTimeContainer" style="display: none;">
+<label class="block mb-1">Time (e.g., 4:20 PM):</label>
+<input class="w-full border rounded px-2 py-1" id="regTimeInput" type="text"/>
+</div>
+<div class="mt-4 flex justify-end gap-2">
+<button class="px-3 py-1 bg-gray-200 rounded" onclick="closeRegTypeModal()">Cancel</button>
+<button class="px-3 py-1 bg-blue-500 text-white rounded" onclick="confirmRegTypeSelection()">Confirm</button>
+</div>
+</div>
+</div>
+<!-- Table Change Modal -->
+<div class="fixed inset-0 bg-black bg-opacity-50 hidden" id="tableChangeModal">
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg">
+<h3 class="text-lg font-bold mb-4">Add Table Change Request</h3>
+<div class="space-y-4">
+<div>
+<label class="block mb-2">Player Name:</label>
+<input class="w-full px-3 py-2 border rounded" id="changePlayerName" type="text"/>
+</div>
+<div>
+<label class="block mb-2">From:</label>
+<select class="w-full px-3 py-2 border rounded" id="changeFromTable">
+<option value="">Select Table</option>
+<option value="T1">T1</option>
+<option value="T2">T2</option>
+<option value="T3">T3</option>
+<option value="T4">T4</option>
+<option value="T5">T5</option>
+<option value="T6">T6</option>
+</select>
+</div>
+<div>
+<label class="block mb-2">To:</label>
+<select class="w-full px-3 py-2 border rounded" id="changeToTable">
+<option value="">Select Table</option>
+<!-- Options will be populated dynamically -->
+</select>
+</div>
+</div>
+<div class="mt-4 flex justify-end gap-2">
+<button class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" onclick="closeTableChangeModal()">
+          Cancel
+        </button>
+<button class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600" onclick="confirmTableChange()">
+          Add Request
+        </button>
+</div>
+</div>
+</div>
+<!-- New List Modal -->
+<div class="fixed inset-0 bg-black bg-opacity-50 hidden" id="newListModal">
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg">
+<h3 class="text-lg font-bold mb-4">Add New List</h3>
+<div class="space-y-4">
+<div>
+<label class="block mb-2">List Name:</label>
+<input class="w-full px-3 py-2 border rounded" id="newListName" type="text"/>
+</div>
+</div>
+<div class="mt-4 flex justify-end gap-2">
+<button class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" onclick="closeNewListModal()">
+          Cancel
+        </button>
+<button class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600" onclick="confirmNewList()">
+          Add List
+        </button>
+</div>
+</div>
+</div>
+<script>
+    /* -------------- Existing Tables, Players, Draw, Lobby Code -------------- */
+    let originalTablesSnapshot = null;
+    let tables = JSON.parse(localStorage.getItem("pokerTables")) || [
+      { name: "NLH 1/3", count: 1, active: true, default: true, colorCode: "#e0f7fa" }
+    ];
+    let players = JSON.parse(localStorage.getItem("pokerPlayers")) || [];
+    let drawResults = {};
+    let closedTablesArray = [];
+    let displayWindow = null;
+    
+    function updateTablesSnapshot() { originalTablesSnapshot = JSON.parse(JSON.stringify(tables)); }
+    function showTab(tabId) {
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+      document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
+      let elem = document.getElementById(tabId);
+      if (!elem) return;
+      elem.classList.add("active");
+      document.querySelector(`.nav-item[onclick="showTab('${tabId}')"]`).classList.add("active");
+      if (tabId === "tablesTab") renderTables();
+      if (tabId === "playersTab") { renderQuickButtons(); renderPlayers(); }
+      if (tabId === "drawTab") renderDraw();
+      if (tabId === "lobbyTab") renderLobby();
+      if (tabId === "waitingListManagerTab") { startWaitingListManager(); }
+    }
+    showTab("tablesTab");
+    function saveTables() { localStorage.setItem("pokerTables", JSON.stringify(tables)); }
+    function loadTables() {
+      const saved = localStorage.getItem("pokerTables");
+      if (saved) {
+        tables = JSON.parse(saved);
+        if (!tables.some(t => t.default)) {
+          tables.unshift({ name: "NLH 1/3", count: 1, active: true, default: true, colorCode: "#e0f7fa" });
+        }
+      }
+      if (!originalTablesSnapshot) updateTablesSnapshot();
+      renderTables();
+    }
+    function renderTables() {
+      const container = document.getElementById("tableList");
+      container.innerHTML = "";
+      const sortedTables = [...tables].sort((a, b) => (b.default ? 1 : 0) - (a.default ? 1 : 0));
+      sortedTables.forEach(table => {
+        const color = table.active ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500";
+        const status = table.active ? "Active ✅" : "Inactive ❌";
+        const closedLabel = table.active ? "" : `<span class="closed-label">Closed</span>`;
+        const div = document.createElement("div");
+        div.className = `border-l-4 p-4 rounded ${color}`;
+        div.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="text-xl font-semibold">${table.name} ${closedLabel}</h2>
+              <p class="text-sm text-gray-600">Instances: ${table.count}</p>
+              <p class="text-sm">${status}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" min="0" value="${table.count}" class="w-16 px-2 py-1 border rounded" onchange="updateCount(${tables.indexOf(table)}, this.value)">
+              <button onclick="toggleStatus(${tables.indexOf(table)})" class="px-2 py-1 rounded btn-apple bg-gray-300 hover:bg-gray-400">
+                ${table.active ? "Turn Off" : "Turn On"}
+              </button>
+              ${!table.default ? `<button onclick="removeTable(${tables.indexOf(table)})" class="px-2 py-1 rounded btn-apple bg-red-400 text-white hover:bg-red-500">Delete</button>` : ""}
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+      saveTables();
+    }
+    function addTable() {
+      // Old addTable is replaced by modal (openAddTableModal)
+    }
+    function openAddTableModal() {
+      document.getElementById("addTableModal").style.display = "flex";
+    }
+    function closeAddTableModal() {
+      document.getElementById("addTableModal").style.display = "none";
+    }
+    function confirmAddTable() {
+      const typeSelect = document.getElementById("newTableType");
+      const sbInput = document.getElementById("newTableSmallBlind");
+      const bbInput = document.getElementById("newTableBigBlind");
+      const tableType = typeSelect.value;
+      const smallBlind = sbInput.value.trim();
+      const bigBlind = bbInput.value.trim();
+      if (!smallBlind || !bigBlind) {
+        alert("Please enter both small and big blind amounts.");
+        return;
+      }
+      // Create new table object (default count is set to 1)
+      tables.push({
+        name: `${tableType} ${smallBlind}/${bigBlind}`,
+        count: 1,
+        active: true,
+        default: false,
+        colorCode: getRandomLightColor(),
+        smallBlind: smallBlind,
+        bigBlind: bigBlind
+      });
+      closeAddTableModal();
+      renderTables();
+    }
+    function getRandomLightColor() {
+      const letters = 'BCDEF'.split('');
+      let color = '#';
+      for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * letters.length)]; }
+      return color;
+    }
+    function updateCount(index, value) {
+      tables[index].count = parseInt(value) || 0;
+      renderTables();
+      updateTablesSnapshot();
+      updateGlobalStats();
+      if(document.getElementById("drawTab").classList.contains("active")) renderDraw();
+    }
+    function toggleStatus(index) {
+      tables[index].active = !tables[index].active;
+      renderTables();
+      updateTablesSnapshot();
+      updateGlobalStats();
+      if(document.getElementById("drawTab").classList.contains("active")) renderDraw();
+    }
+    function removeTable(index) {
+      if (tables[index].default) return;
+      tables.splice(index, 1);
+      renderTables();
+      updateTablesSnapshot();
+      updateGlobalStats();
+      if(document.getElementById("drawTab").classList.contains("active")) renderDraw();
+    }
+    loadTables();
+    function savePlayers() { localStorage.setItem("pokerPlayers", JSON.stringify(players)); }
+    function resetPlayers() { if (confirm("Clear all players?")) { players = []; savePlayers(); renderPlayers(); } }
+    function capitalizeName(name) { return name.replace(/\b\w/g, l => l.toUpperCase()); }
+    function handleKey(e) { if (e.key === "Enter") addPlayer(); }
+    function addPlayer(extraTable = null, allTables = false) {
+      const input = document.getElementById("playerName");
+      const name = capitalizeName(input.value.trim());
+      if (!name) return;
+      const defaultTable = tables.find(t => t.default)?.name || "NLH 1/3";
+      let tableList = [defaultTable];
+      if (allTables) { tableList = tables.filter(t => t.active).map(t => t.name); }
+      else if (extraTable && extraTable !== defaultTable) { tableList.push(extraTable); }
+      players.push({ name, tables: [...new Set(tableList)] });
+      savePlayers();
+      input.value = "";
+      input.focus();
+      renderPlayers();
+    }
+    function quickAddPlayer(tableName) {
+      const input = document.getElementById("playerName");
+      const name = input.value.trim();
+      if (!name) {
+        alert("Please insert a player name.");
+        return;
+      }
+      addPlayer(tableName);
+    }
+    function renderQuickButtons() {
+      const container = document.getElementById("quickButtons");
+      container.innerHTML = "";
+      tables.filter(t => t.active).forEach(t => {
+        const btn = document.createElement("button");
+        btn.textContent = t.name;
+        btn.className = "bg-gray-300 hover:bg-gray-400 px-2 py-1 rounded btn-apple";
+        btn.onclick = () => { quickAddPlayer(t.name); };
+        container.appendChild(btn);
+      });
+    }
+    function renderTableSummary() {
+      const container = document.getElementById("tableSummary");
+      container.innerHTML = "";
+      tables.forEach(t => {
+        const count = players.filter(p => p.tables.includes(t.name)).length;
+        const tile = document.createElement("div");
+        tile.className = "cursor-pointer bg-white border rounded-lg shadow p-4 text-center hover:bg-blue-50 transition";
+        tile.onclick = () => showTablePlayers(t.name);
+        tile.innerHTML = `
+          <p class="text-lg font-semibold text-blue-700">${t.name}</p>
+          <p class="text-sm mt-1">Players: <a class="list-count-link">${count}</a></p>
+        `;
+        container.appendChild(tile);
+      });
+    }
+    function showTablePlayers(tableName) {
+      const modal = document.getElementById("modal");
+      const title = document.getElementById("modalTitle");
+      const list = document.getElementById("modalList");
+      const tablePlayers = players.filter(p => p.tables.includes(tableName)).map(p => p.name);
+      title.innerText = `Players in ${tableName}`;
+      list.innerHTML = tablePlayers.map(p => `<li>${p}</li>`).join("");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+    function closeModal() {
+      const modal = document.getElementById("modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+    function editPlayer(index) {
+      const name = prompt("Edit player name:", players[index].name);
+      if (name) { players[index].name = capitalizeName(name.trim()); savePlayers(); renderPlayers(); }
+    }
+    function deletePlayer(index) {
+      if (confirm(`Delete ${players[index].name}?`)) { players.splice(index, 1); savePlayers(); renderPlayers(); }
+    }
+    function renderPlayers() {
+      const list = document.getElementById("playerList");
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      list.innerHTML = "";
+      const filtered = players.map((p, i) => ({ ...p, index: i }))
+          .filter(p => p.name.toLowerCase().includes(search))
+          .reverse();
+      filtered.forEach(player => {
+        const div = document.createElement("div");
+        div.className = "bg-white p-4 rounded shadow";
+        const checkboxes = tables.filter(t => t.active).map(t => {
+          const checked = player.tables.includes(t.name) ? "checked" : "";
+          return `
+            <label class="mr-4">
+              <input type="checkbox" onchange="togglePlayerTable(${player.index}, '${t.name}')" ${checked}>
+              ${t.name}
+            </label>
+          `;
+        }).join("");
+        const realIndex = players.length - 1 - player.index;
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-semibold">#${realIndex + 1} - ${player.name}</p>
+              <div class="text-sm mt-1">${checkboxes}</div>
+            </div>
+            <div class="space-x-2 mt-1">
+              <button onclick="editPlayer(${player.index})" class="text-blue-600 hover:underline text-sm">Edit</button>
+              <button onclick="deletePlayer(${player.index})" class="text-red-600 hover:underline text-sm">Delete</button>
+            </div>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+      renderTableSummary();
+    }
+    function togglePlayerTable(index, tableName) {
+      const player = players[index];
+      const exists = player.tables.includes(tableName);
+      player.tables = exists ? player.tables.filter(t => t !== tableName) : [...player.tables, tableName];
+      savePlayers();
+      renderPlayers();
+    }
+    loadTables();
+    function resetDraw() {
+      if (!confirm("Are you sure you want to reset all draws?")) return;
+      const defT = tables.find(t => t.default);
+      if (defT && closedTablesArray.length > 0) { defT.count -= closedTablesArray.length; }
+      tables = JSON.parse(JSON.stringify(originalTablesSnapshot));
+      closedTablesArray = [];
+      saveTables();
+      renderTables();
+      drawResults = {};
+      renderDraw();
+    }
+    function performGlobalDraw() {
+      const shuffled = [...players].sort(() => Math.random() - 0.5);
+      const totalSeats = tables.filter(t => t.active).reduce((sum, t) => sum + t.count * 9, 0);
+      drawResults.global = {
+        seated: shuffled.slice(0, totalSeats).map(p => ({ ...p, initial: true })),
+        waiting: shuffled.slice(totalSeats)
+      };
+      const defT = tables.find(t => t.default);
+      const defaultInitial = drawResults.global.seated.filter(p => p.tables.length === 1 && p.tables.includes(defT.name));
+      const defaultWaiting = drawResults.global.waiting.filter(p => p.tables.includes(defT.name));
+      drawResults[defT.name] = { seated: defaultInitial, waiting: defaultWaiting };
+      tables.filter(t => !t.default).forEach(table => {
+        drawResults[table.name] = {
+          eligible: drawResults.global.seated.filter(p => p.tables.includes(table.name)),
+          waiting: drawResults.global.waiting.filter(p => p.tables.includes(table.name))
+        };
+      });
+      tables.filter(t => !t.default).forEach(table => {
+        if (drawResults[table.name] && drawResults[table.name].waiting) {
+          drawResults[table.name].waiting = drawResults[table.name].waiting.map(p => ({...p}))
+        }
+      });
+      updateGlobalDrawDisplay();
+      updateNonDefaultDrawDisplays();
+      updateGlobalStats();
+    }
+    function updateGlobalDrawDisplay() {
+      const globalAllPlayersList = document.getElementById("globalAllPlayersList");
+      if (globalAllPlayersList) {
+        globalAllPlayersList.innerHTML = players.map(p => p.name).join(", ");
+      }
+      const globalResult = document.getElementById("globalResult");
+      if (globalResult && drawResults.global) {
+        const { seated = [], waiting = [] } = drawResults.global;
+        globalResult.innerHTML = `
+          <p class="text-md font-semibold text-red-700">Global Waiting List:<br> ${waiting.length > 0 ? waiting.map(p => `<span class="waiting-player">${p.name}</span>`).join(", ") : "None"}</p>
+          <p class="text-md font-semibold text-black">Global Seated List:<br> <span>${seated.filter(p => p.initial).length > 0 ? seated.filter(p => p.initial).map(p => p.name).join(", ") : "None"}</span></p>
+        `;
+      }
+      const defT = tables.find(t => t.default);
+      if (defT && drawResults[defT.name]) {
+        const defaultWaitingDisplay = document.getElementById("defaultWaitingDisplay");
+        const defaultSeatedDisplay = document.getElementById("defaultSeatedDisplay");
+        if (defaultWaitingDisplay) {
+          defaultWaitingDisplay.innerHTML =
+            drawResults[defT.name].waiting.length > 0 ? drawResults[defT.name].waiting.map(p => `<span class="waiting-player">${p.name}</span>`).join(", ") : "None";
+        }
+        if (defaultSeatedDisplay) {
+          defaultSeatedDisplay.innerHTML =
+            drawResults[defT.name].seated.length > 0 ? drawResults[defT.name].seated.map(p => {
+              const originClass = p.origin ? ' default-table-new-player' : '';
+              return `<strong class="${originClass}">${p.name}</strong>`;
+            }).join(", ") : "None";
+        }
+        const waitingCount = drawResults[defT.name].waiting.length;
+        const seatedCount = drawResults[defT.name].seated.length;
+        const defaultWaitingCountSpan = document.getElementById("defaultWaitingCount");
+        const defaultSeatedCountSpan = document.getElementById("defaultSeatedCount");
+        if(defaultWaitingCountSpan) { defaultWaitingCountSpan.textContent = waitingCount; }
+        if(defaultSeatedCountSpan) { defaultSeatedCountSpan.textContent = seatedCount; }
+      }
+    }
+    function updateNonDefaultDrawDisplays() {
+      tables.filter(t => !t.default).forEach(table => { updateNonDefaultDrawDisplay(table.name); });
+    }
+    function updateNonDefaultDrawDisplay(tableName) {
+      const currentData = drawResults[tableName] || { eligible: [], waiting: [], seated: [] };
+      const eligibleEl = document.getElementById(`${tableName}-eligible`);
+      const waitingEl = document.getElementById(`${tableName}-waiting`);
+      const seatedEl = document.getElementById(`${tableName}-seated`);
+      if (eligibleEl) {
+        eligibleEl.innerHTML = currentData.eligible.length
+          ? currentData.eligible.map(p => `<span class="fancy-player-box" draggable="true" ondragstart="handleDragStart(event, '${p.name}', '${tableName}')">${p.name}</span>`).join(" ")
+          : "None";
+      }
+      if (waitingEl) {
+        waitingEl.innerHTML = currentData.waiting.length
+          ? currentData.waiting.map(p => {
+              let classes = "waiting-player";
+              if (p.justAdded) { classes += " new-waiting"; }
+              return `<span class="${classes}">${p.name}</span>`;
+            }).join(", ")
+          : "None";
+      }
+      if (seatedEl) {
+        seatedEl.innerHTML = currentData.seated && currentData.seated.length
+          ? currentData.seated.map(p => `<span class="${getDrawColorClass(p)}"><strong>${p.name}</strong></span>`).join(", ")
+          : "None";
+      }
+      const countEl = document.getElementById(`${tableName}-eligibleCount`);
+      if (countEl) { countEl.textContent = currentData.eligible.length; }
+      const seatedCountEl = document.getElementById(`${tableName}-seatedCount`);
+      if (seatedCountEl) { seatedCountEl.textContent = currentData.seated ? currentData.seated.length : 0; }
+    }
+    function updateGlobalStats() {
+      const totalPlayersEl = document.getElementById("totalPlayers");
+      const totalCapacityEl = document.getElementById("totalCapacity");
+      if (totalPlayersEl) totalPlayersEl.textContent = players.length;
+      if (totalCapacityEl) {
+        const capacity = tables.filter(t => t.active).reduce((sum, t) => sum + t.count * 9, 0);
+        totalCapacityEl.textContent = capacity;
+      }
+    }
+    function getDrawColorClass(player) {
+      if (!player.drawStatus) return "";
+      if (player.drawStatus === "tableWinner") return "";
+      if (player.drawStatus === "assignDefault") return "text-purple-600";
+      if (player.drawStatus.startsWith("closedLoser:")) return "text-pink-600";
+      if (player.drawStatus.startsWith("loserFrom:")) return "text-amber-800";
+      return "";
+    }
+    function performTableDraw(tableName) {
+      const table = tables.find(t => t.name === tableName);
+      if (!table || table.default || !table.active) return;
+      const capacity = table.count * 9;
+      const currentEligible = drawResults[tableName]?.eligible || [];
+      const shuffled = [...currentEligible].sort(() => Math.random() - 0.5);
+      const winners = shuffled.slice(0, capacity).map(p => ({ ...p, drawStatus: "tableWinner", initial: true }));
+      const losers = shuffled.slice(capacity).map(p => ({ ...p, drawStatus: "loserFrom:" + tableName, initial: false, origin: 'nonDefaultDraw', justAdded: true }));
+      drawResults[tableName] = drawResults[tableName] || {};
+      drawResults[tableName].seated = winners;
+      // Prepend the new losers to the waiting list so they appear first
+      drawResults[tableName].waiting = losers.concat(drawResults[tableName].waiting || []);
+      const defT = tables.find(t => t.default);
+      if (!drawResults[defT.name]) { drawResults[defT.name] = { seated: [], waiting: [] }; }
+      drawResults[defT.name].seated = drawResults[defT.name].seated.concat(losers);
+      drawResults[tableName].eligible = [];
+      updateNonDefaultDrawDisplay(tableName);
+      updateGlobalDrawDisplay();
+    }
+    function closeTable(tableName) {
+      const table = tables.find(t => t.name === tableName);
+      if (!table) return;
+      if (!drawResults[tableName]) { drawResults[tableName] = { eligible: [], waiting: [] }; }
+      const eligible = drawResults[tableName].eligible || [];
+      const defT = tables.find(t => t.default);
+      if (!drawResults[defT.name]) { drawResults[defT.name] = { seated: [], waiting: [] }; }
+      eligible.forEach(p => { p.drawStatus = "closedLoser:" + tableName; p.origin = 'closedTable'; drawResults[defT.name].seated.push(p); });
+      // Modified here to pre-append the losers to the waiting list
+      drawResults[tableName].waiting = eligible.map(p => ({ ...p, justAdded: true })).concat(drawResults[tableName].waiting || []);
+      drawResults[tableName].eligible = [];
+      table.count = 0;
+      defT.count += 1;
+      table.active = false;
+      closedTablesArray.push(tableName);
+      renderTables();
+      updateGlobalDrawDisplay();
+      updateNonDefaultDrawDisplays();
+      updateGlobalStats();
+      if(document.getElementById("drawTab").classList.contains("active")) renderDraw();
+    }
+    function handleDragStart(event, playerName, oldTable) {
+      event.dataTransfer.setData("text/plain", JSON.stringify({ playerName, oldTable }));
+      event.target.style.opacity = "0.5";
+    }
+    function handleDragOver(event) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }
+    function handleDrop(event, newTableName) {
+      event.preventDefault();
+      const data = JSON.parse(event.dataTransfer.getData("text/plain"));
+      const { playerName, oldTable } = data;
+      if (!drawResults[oldTable]) { drawResults[oldTable] = { eligible: [], waiting: [] }; }
+      if (!drawResults[newTableName]) { drawResults[newTableName] = { eligible: [], waiting: [] }; }
+      drawResults[oldTable].eligible = drawResults[oldTable].eligible.filter(p => p.name !== playerName);
+      if (!drawResults[newTableName].eligible.some(p => p.name === playerName)) {
+        drawResults[newTableName].eligible.push({ name: playerName, drawStatus: "" });
+      }
+      updateNonDefaultDrawDisplay(oldTable);
+      updateNonDefaultDrawDisplay(newTableName);
+    }
+    function handleDragEnd(event) { event.target.style.opacity = "1"; }
+
+    // --- New drag-drop reorder for Waiting List entries ---
+    function onWaitingDragStart(e, tableName, index) {
+      e.dataTransfer.setData('text/plain', JSON.stringify({ table: tableName, index }));
+    }
+        
+    
+    // Added searchDraw function for filtering Draw cards
+    function searchDraw() {
+      const query = document.getElementById("drawSearch").value.toLowerCase();
+      const cards = document.querySelectorAll("#drawContent .draw-card");
+      cards.forEach(card => {
+        if (card.textContent.toLowerCase().includes(query)) {
+          card.style.display = "";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+    
+    function renderDraw() {
+      const container = document.getElementById("drawContent");
+      if (!container) return;
+      container.innerHTML = "";
+      const globalCard = document.createElement("div");
+      globalCard.className = "draw-card";
+      globalCard.innerHTML = `
+        <div class="card-header">
+          Global Draw — Capacity: <a id="totalCapacity" class="list-count-link"></a> | Players: <a id="totalPlayers" class="list-count-link"></a>
+        </div>
+        <div class="list-container">
+          <h4 class="text-sm font-semibold text-gray-700 mb-1">All players</h4>
+          <p id="globalAllPlayersList" class="text-sm"></p>
+        </div>
+        <div id="globalResult">
+          <p class="text-md font-semibold text-red-700">Global Waiting List:<br> <span id="globalWaitingDisplay" class="waiting-player"></span></p>
+          <p class="text-md font-semibold text-black">Global Seated List:<br> <span id="globalSeatedDisplay"></span></p>
+        </div>
+        <button onclick="performGlobalDraw()" class="bg-green-600 text-white px-3 py-1 rounded btn-apple hover:bg-green-700 w-full mt-4">Draw</button>
+      `;
+      container.appendChild(globalCard);
+      const nonDefault = tables.filter(t => !t.default);
+      nonDefault.forEach(table => {
+        const tableCard = document.createElement("div");
+        tableCard.className = "draw-card";
+        if (!table.active) tableCard.classList.add("closed-card");
+        tableCard.setAttribute("ondragover", "handleDragOver(event)");
+        tableCard.setAttribute("ondrop", `handleDrop(event, '${table.name}')`);
+        tableCard.innerHTML = `
+          <div class="card-header">${table.name} (Capacity: <span class="list-count-link">${table.count * 9}</span>) — Eligible: <span id="${table.name}-eligibleCount" class="list-count-link">0</span></div>
+          <div class="flex gap-2 w-full mb-3">
+            <button onclick="performTableDraw('${table.name}')" class="bg-blue-600 text-white px-3 py-1 rounded btn-apple hover:bg-blue-700 flex-1" ${!table.active ? "disabled" : ""}>Open Table</button>
+            <button onclick="closeTable('${table.name}')" class="bg-red-600 text-white px-3 py-1 rounded btn-apple hover:bg-red-700 flex-1" ${!table.active ? "disabled" : ""}>Close Table</button>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-green-700">Eligible List:</p>
+            <div id="${table.name}-eligible" class="text-sm" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${table.name}')"></div>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-red-700">Waiting List:</p>
+            <div id="${table.name}-waiting" class="text-sm"></div>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-black">Seated List (<span id="${table.name}-seatedCount"></span>):</p>
+            <div id="${table.name}-seated" class="text-sm"></div>
+          </div>
+        `;
+        container.appendChild(tableCard);
+      });
+      const defT = tables.find(t => t.default);
+      if (defT) {
+        const defaultCard = document.createElement("div");
+        defaultCard.className = "draw-card";
+        defaultCard.innerHTML = `
+          <div class="card-header">${defT.name} (Capacity: <span class="list-count-link">${defT.count * 9}</span>)</div>
+          <div id="defaultResult">
+            <div id="defaultWaitingList">
+              <p class="text-md font-semibold text-red-700">Waiting List (<span id="defaultWaitingCount"></span>):<br> <span id="defaultWaitingDisplay" class="waiting-player"></span></p>
+            </div>
+            <div id="defaultSeatedList">
+              <p class="text-md font-semibold text-black">Seated List (<span id="defaultSeatedCount"></span>):<br> <span id="defaultSeatedDisplay"></span></p>
+            </div>
+          </div>
+        `;
+        container.appendChild(defaultCard);
+      }
+      updateGlobalDrawDisplay();
+      updateNonDefaultDrawDisplays();
+      updateGlobalStats();
+    }
+    function renderLobby() {
+      const container = document.getElementById("lobbyContent");
+      if (!container) return;
+      container.innerHTML = "";
+      tables.filter(t => t.active).forEach(table => {
+        const tData = drawResults[table.name] || {};
+        const seated = tData.seated || [];
+        const wait = tData.waiting || [];
+        const seatStr = seated.map(p => p.name).join(", ") || "None";
+        const waitStr = wait.map(p => `<span class="waiting-player">${p.name}</span>`).join(", ") || "None";
+        const card = document.createElement("div");
+        card.className = "bg-white p-6 rounded-lg shadow";
+        card.innerHTML = `
+          <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center">
+              <h2 class="text-xl font-semibold mr-4">${table.name}</h2>
+              <span class="text-lg font-semibold text-black">(${seated.length}/${table.count * 9})</span>
+            </div>
+            <div>
+              <button onclick="printTable('${table.name}')" class="bg-blue-500 text-white px-2 py-1 rounded btn-apple hover:bg-blue-600">Print</button>
+              <button onclick="downloadTable('${table.name}')" class="bg-green-500 text-white px-2 py-1 rounded btn-apple hover:bg-green-600 ml-2">Download</button>
+            </div>
+          </div>
+          <p class="text-lg font-semibold text-red-700">Waiting:</p>
+          <p><span class="font-bold text-red-700">${waitStr}</span></p>
+          <p class="text-lg font-semibold text-black mt-2">Seated (<span>${seated.length}</span>):</p>
+          <p><span class="font-bold text-black">${seatStr}</span></p>
+        `;
+        container.appendChild(card);
+      });
+    }
+    function printTable(tableName) {
+      let data = drawResults[tableName];
+      if (tableName === "global") data = drawResults.global;
+      if (tableName === "default") data = drawResults[tables.find(t => t.default)?.name];
+      if (!data) return;
+      let waitingStr = "";
+      let seatedStr = "";
+      const defT = tables.find(t => t.default);
+      if (tableName === "global") {
+        waitingStr = (data.waiting || []).map(p => p.name).join(", ") || "None";
+        seatedStr = (data.seated || []).filter(p => p.initial).map(p => p.name).join(", ") || "None";
+      } else if (defT && tableName === defT.name) {
+        const combinedWait = [...(data.waiting || []), ...(data.globalWaiting || [])];
+        waitingStr = combinedWait.map(p => p.name).join(", ") || "None";
+        seatedStr = (data.seated || []).filter(p => p.initial).map(p => p.name).join(", ") || "None";
+      } else {
+        waitingStr = (data.waiting || []).map(p => p.name).join(", ") || "None";
+        seatedStr = (data.seated || []).map(p => p.name).join(", ") || "None";
+      }
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+      printWindow.document.write(`<html><head><title>Poker Table - ${tableName}</title></head><body>`);
+      printWindow.document.write(`<h1>${tableName}</h1>`);
+      printWindow.document.write(`<h3>Waiting List:</h3><p>${waitingStr}</p>`);
+      printWindow.document.write(`<h3>Seated List:</h3><p>${seatedStr}</p>`);
+      printWindow.document.write(`
+</body></html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+    function downloadTable(tableName) {
+      let data = drawResults[tableName];
+      if (tableName === "global") data = drawResults.global;
+      if (tableName === "default") data = drawResults[tables.find(t => t.default)?.name];
+      if (!data) return;
+      let waitingStr = "";
+      let seatedStr = "";
+      const defT = tables.find(t => t.default);
+      if (tableName === "global") {
+        waitingStr = (data.waiting || []).map(p => p.name).join(", ") || "None";
+        seatedStr = (data.seated || []).filter(p => p.initial).map(p => p.name).join(", ") || "None";
+      } else if (defT && tableName === defT.name) {
+        const combinedWait = [...(data.waiting || []), ...(data.globalWaiting || [])];
+        waitingStr = combinedWait.map(p => p.name).join(", ") || "None";
+        seatedStr = (data.seated || []).filter(p => p.initial).map(p => p.name).join(", ") || "None";
+      } else {
+        waitingStr = (data.waiting || []).map(p => p.name).join(", ") || "None";
+        seatedStr = (data.seated || []).map(p => p.name).join(", ") || "None";
+      }
+      const content = `Table: ${tableName}\nWaiting List: ${waitingStr}\nSeated List: ${seatedStr}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${tableName}_data.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    /* ------------------ WAITING LIST MANAGER SECTION ------------------ */
+    let waitingListData = JSON.parse(localStorage.getItem("pokerWaitingList")) || {};
+    let waitingListBackup = null;
+    let selectedWaitingListTable = null;
+    let timerCheckInterval = null;
+    function formatTime12Hour(date) {
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+    function getCurrentFormattedTime() {
+      return formatTime12Hour(new Date());
+    }
+    function getRemainingTimeMinutes(reg) {
+      if (reg.type === 'inperson') return null;
+      const now = new Date().getTime();
+      const defaultExp = parseInt(document.getElementById("defaultExpiration").value) || 120;
+      const expiry = reg.expiryTimestamp || (reg.timestamp + defaultExp * 60 * 1000);
+      const diffMs = expiry - now;
+      return Math.max(0, Math.floor(diffMs / (1000 * 60)));
+    }
+    function parseAndFormatTime(timeStr) {
+      timeStr = timeStr.trim();
+      let match;
+      match = timeStr.match(/^(\d{1,2}):(\d{2})\s*([AP]M)?$/i);
+      if (match) {
+        let hours = parseInt(match[1]);
+        let minutes = parseInt(match[2]);
+        let ampm = match[3] ? match[3].toUpperCase() : null;
+        if (!ampm) {
+          if (hours >= 0 && hours <= 23) {
+            ampm = hours >= 12 ? "PM" : "AM";
+            if (hours > 12) hours -= 12;
+          }
+        }
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return formatTime12Hour(date);
+      }
+      match = timeStr.match(/^(\d{3,4})$/);
+      if (match) {
+        let timeNum = match[1].padStart(4, '0');
+        let hours = parseInt(timeNum.substring(0, 2));
+        let minutes = parseInt(timeNum.substring(2, 4));
+        let ampm = hours >= 12 ? "PM" : "AM";
+        if (hours > 12) hours -= 12;
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return formatTime12Hour(date);
+      }
+      return getCurrentFormattedTime();
+    }
+    /* --- NEW: Registration Type Modal Functions --- */
+    let selectedRegType = "";
+    let tempPlayerName = "";
+    function openRegTypeModal() {
+      const name = document.getElementById('waitingListInput').value.trim();
+      if (!name) {
+        alert("Please enter a player's name.");
+        return;
+      }
+      tempPlayerName = name;
+      document.getElementById("regTypeModal").style.display = "flex";
+      selectedRegType = "";
+      document.getElementById("regTimeContainer").style.display = "none";
+      document.getElementById("regTimeInput").value = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
+    }
+    function closeRegTypeModal() {
+      document.getElementById("regTypeModal").style.display = "none";
+    }
+    function selectRegType(type) {
+      selectedRegType = type;
+      if (type === 'called' || type === 'sms') {
+        document.getElementById("regTimeContainer").style.display = "block";
+      } else {
+        document.getElementById("regTimeContainer").style.display = "none";
+      }
+    }
+    function confirmRegTypeSelection() {
+      if (!selectedRegType) {
+        alert("Please select a registration type.");
+        return;
+      }
+      let timeInput = document.getElementById("regTimeInput").value.trim();
+      if ((selectedRegType === 'called' || selectedRegType === 'sms') && !timeInput) {
+        timeInput = getCurrentFormattedTime();
+      }
+      closeRegTypeModal();
+      completeRegistration(timeInput, selectedRegType);
+    }
+    /* --- END NEW Modal Functions --- */
+    /* Modify waiting list key and insert functions to open reg type modal */
+    function handleWaitingListKey(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        openRegTypeModal();
+      }
+    }
+    function insertWaitingListPlayer() {
+      openRegTypeModal();
+    }
+    function completeRegistration(timeInput, regType) {
+      const name = document.getElementById('waitingListInput').value.trim();
+      if (!name) return;
+      let table = selectedWaitingListTable || tables.find(t => t.default)?.name;
+      let currentTimestamp = new Date().getTime();
+      const defaultExp = parseInt(document.getElementById("defaultExpiration").value) || 120;
+      let reg = {
+        name: name,
+        type: regType,
+        timestamp: currentTimestamp,
+        table: table,
+        delayed: false,
+        additionalMinutes: 0
+      };
+      if (regType === 'called' || regType === 'sms') {
+        let formattedTime = timeInput ? parseAndFormatTime(timeInput) : getCurrentFormattedTime();
+        reg.timeDisplay = formattedTime;
+        reg.expiryTimestamp = currentTimestamp + defaultExp * 60 * 1000;
+      }
+      if (table === "All") {
+        tables.forEach(t => {
+          if (!waitingListData[t.name]) waitingListData[t.name] = [];
+          waitingListData[t.name].push({ ...reg, table: t.name });
+        });
+      } else {
+        if (!waitingListData[table]) waitingListData[table] = [];
+        waitingListData[table].push(reg);
+      }
+      saveWaitingListData();
+      renderWaitingListCards();
+      updateDisplayWindow();
+      document.getElementById('waitingListInput').value = "";
+      selectedWaitingListTable = null;
+    }
+    function saveWaitingListData() {
+      localStorage.setItem("pokerWaitingList", JSON.stringify(waitingListData));
+    }
+    function renderWaitingListQuickButtons() {
+      const container = document.getElementById('waitingListQuickButtons');
+      if (!container) return;
+      container.innerHTML = "";
+      tables.forEach(t => {
+        const btn = document.createElement("button");
+        btn.textContent = t.name;
+        btn.className = "bg-gray-300 hover:bg-gray-400 px-2 py-1 rounded btn-apple";
+        btn.onclick = () => { selectedWaitingListTable = t.name; openRegTypeModal(); };
+        container.appendChild(btn);
+      });
+      const allBtn = document.createElement("button");
+      allBtn.textContent = "All";
+      allBtn.className = "bg-purple-500 text-white px-2 py-1 rounded btn-apple hover:bg-purple-600";
+      allBtn.onclick = () => { selectedWaitingListTable = "All"; openRegTypeModal(); };
+      container.appendChild(allBtn);
+    }
+    function renderWaitingListCards() {
+      const container = document.getElementById("waitingListCards");
+      if (!container) return;
+      container.innerHTML = "";
+      
+      // Static Table Change card
+      const changeCard = document.createElement('div');
+      changeCard.className = 'waiting-card';
+      changeCard.innerHTML = `
+        <div class="card-header">Table Change</div>
+        <button class="bg-blue-500 text-white px-3 py-1 rounded btn-apple hover:bg-blue-600" onclick="openTableChangeModal()">Add</button>
+      `;
+      container.appendChild(changeCard);
+
+      // Render stored table-change requests
+      const changes = JSON.parse(localStorage.getItem("tableChanges")) || [];
+      const changeList = document.createElement('ul');
+      changeList.className = 'mt-2 list-disc pl-5';
+
+      changes.forEach((req, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          ${req.name} ${req.from} → ${req.to}
+          <button class="ml-2 text-red-600 hover:text-red-800 text-xl" onclick="removeTableChange(${idx})" title="Delete">
+            ❌
+          </button>
+        `;
+        changeList.appendChild(li);
+      });
+
+      changeCard.appendChild(changeList);
+
+
+
+      let filterValue = document.getElementById("waitingListFilter")?.value || "all";
+      let searchText = document.getElementById("waitingListSearch")?.value?.toLowerCase() || "";
+      tables.forEach(table => {
+        let registrations = waitingListData[table.name] || [];
+    let firstInpersonFound = false;
+    let filteredRegs = registrations
+      .filter(reg => filterValue === "all" || reg.type === filterValue)
+      .filter(reg => searchText === "" || reg.name.toLowerCase().includes(searchText));
+    let card = document.createElement("div");
+    card.className = "waiting-card";
+    card.innerHTML = `<div class="card-header">${table.name} Waiting List</div>
+      <ul id="waiting-${table.name}" class="space-y-2 mt-2">
+        ${filteredRegs.map((reg, index) => {
+
+
+let entryClass = "";
+if (!firstInpersonFound && reg.type === "inperson") {
+  entryClass = "entry-green";
+  firstInpersonFound = true;
+} else if (reg.delayed) {
+  entryClass = "entry-yellow";
+} else if ((reg.type === "called" || reg.type === "sms") && getRemainingTimeMinutes(reg) <= 6) {
+  entryClass = "entry-red";
+}
+
+
+          const remainingMinutes = (reg.type === 'called' || reg.type === 'sms') ? getRemainingTimeMinutes(reg) : "";
+          const regIcon = reg.type === 'called' ? '📞' : reg.type === 'sms' ? '💬' : '👤';
+          const timeDisplay = (reg.type === 'called' || reg.type === 'sms') && reg.timeDisplay ? reg.timeDisplay : "";
+          const hrs = Math.floor(remainingMinutes / 60);
+          const mins = remainingMinutes % 60;
+          const timeLeft = (reg.type === 'called' || reg.type === 'sms') && !isNaN(remainingMinutes) ? ` ${hrs > 0 ? hrs + 'h ' : ''}${mins}m` : "";
+
+          return `
+            <li  class="waiting-entry ${entryClass}" data-regname="${reg.name}" data-tablename="${table.name}" onclick="toggleActions(event, this)">
+              <div class="entry-content flex justify-between">
+                <div>
+                  ${index+1}- <strong>${reg.name}</strong> ${regIcon} ${timeDisplay}${timeLeft}
+                </div>
+                <div class="time-remaining"></div>
+              </div>
+              
+
+
+
+<div class="entry-actions hidden absolute -top-10 left-1/2 -translate-x-1/2 flex gap-2 z-50 action-menu text-base">
+  <button onclick="seatPlayer('${reg.name}', '${table.name}')" title="Seat">🪑</button>
+  <button onclick="delayPlayer('${reg.name}', '${table.name}')" title="Delay">⏳</button>
+  <button onclick="openEditWaitingModal('${reg.name}', '${table.name}')" title="Edit">✏️</button>
+  <button onclick="deletePlayerWaiting('${reg.name}', '${table.name}')" title="Delete">❌</button>
+  <button onclick="changeToInPerson('${reg.name}')" title="Change to In Person">🙋‍♂️</button>
+  <button onclick="reorderPlayerPrompt('${reg.name}', '${table.name}')" title="Reorder">🔃</button>
+</div>
+<span class="absolute right-1 top-1 text-lg cursor-pointer z-40" onclick="handleToggleActionMenu(event, this)">⋮</span>
+
+
+
+
+            </li>`;
+        }).join("")}
+      </ul>`;
+    container.appendChild(card);
+    
+      });
+    }
+    
+    // Helper to remove a table-change entry
+    function removeTableChange(index) {
+      if (!confirm("❌ Are you sure you want to delete this table-change request?")) return;
+const changes = JSON.parse(localStorage.getItem("tableChanges")) || [];
+      if (index >= 0 && index < changes.length) {
+        changes.splice(index, 1);
+        localStorage.setItem("tableChanges", JSON.stringify(changes));
+        renderWaitingListCards();
+        updateDisplayWindow();
+      }
+    }
+
+
+// Global click event to close action boxes and modals when clicking outside
+    document.addEventListener("click", function(e) {
+      document.querySelectorAll(".entry-actions").forEach(el => {
+        if (!el.contains(e.target)) {
+          el.classList.add("hidden");
+          el.classList.remove("flex");
+        }
+      });
+      const editModal = document.getElementById("editWaitingModal");
+      if (editModal && !editModal.querySelector(".edit-waiting-modal-content").contains(e.target)) {
+        closeEditWaitingModal();
+      }
+    });
+    // New toggleActions function for waiting list entries
+    function toggleActions(event, liElement) {
+      event.stopPropagation();
+      const actions = liElement.querySelector('.entry-actions');
+      if (actions) {
+        if (actions.classList.contains('hidden')) {
+          actions.classList.remove('hidden');
+          actions.classList.add('flex');
+        } else {
+          actions.classList.add('hidden');
+          actions.classList.remove('flex');
+        }
+      }
+    }
+    
+    function changeToInPerson(playerName) {
+      if (!confirm(`Are you sure you want to change ${playerName} to In Person?`)) return;
+      // Update every table’s waiting list
+      for (const table in waitingListData) {
+        waitingListData[table].forEach(reg => {
+          if (reg.name === playerName && (reg.type === 'called' || reg.type === 'sms')) {
+            reg.type = 'inperson';
+            delete reg.expiryTimestamp;
+            delete reg.timeDisplay;
+          }
+        });
+      }
+      saveWaitingListData();
+      renderWaitingListCards();
+      updateDisplayWindow();
+    }
+
+    let editingWaitingData = null;
+    function openEditWaitingModal(playerName, tableName) {
+      editingWaitingData = { name: playerName, table: tableName };
+      let reg;
+      if (waitingListData[tableName]) {
+        reg = waitingListData[tableName].find(r => r.name === playerName);
+      }
+      if (!reg) return;
+      document.getElementById("editWaitingName").value = reg.name;
+      document.querySelectorAll('input[name="editRegType"]').forEach(radio => {
+        radio.checked = (radio.value === reg.type);
+      });
+      if (reg.type === 'called' || reg.type === 'sms') {
+        document.getElementById("editTimeContainer").style.display = "block";
+        document.getElementById("editWaitingTime").value = reg.timeDisplay || "";
+      } else {
+        document.getElementById("editTimeContainer").style.display = "none";
+      }
+      document.getElementById("editWaitingModal").style.display = "flex";
+    }
+    function closeEditWaitingModal() {
+      document.getElementById("editWaitingModal").style.display = "none";
+      editingWaitingData = null;
+    }
+    function saveEditWaiting() {
+      if (!editingWaitingData) return;
+      let tableName = editingWaitingData.table;
+      let reg = waitingListData[tableName].find(r => r.name === editingWaitingData.name);
+      if (!reg) return;
+      reg.name = document.getElementById("editWaitingName").value.trim();
+      const selectedType = document.querySelector('input[name="editRegType"]:checked').value;
+      reg.type = selectedType;
+      if (selectedType === 'called' || selectedType === 'sms') {
+        const timeInput = document.getElementById("editWaitingTime").value.trim();
+        reg.timeDisplay = parseAndFormatTime(timeInput);
+        const defaultExp = parseInt(document.getElementById("defaultExpiration").value) || 120;
+        reg.expiryTimestamp = reg.timestamp + defaultExp * 60 * 1000;
+      } else {
+        delete reg.expiryTimestamp;
+        delete reg.timeDisplay;
+      }
+      saveWaitingListData();
+      renderWaitingListCards();
+      updateDisplayWindow();
+      closeEditWaitingModal();
+    }
+    function seatPlayer(playerName, tableName) {
+      if (confirm("Are you sure you want to seat " + playerName + "?")) {
+        if (tableName) {
+          waitingListData[tableName] = (waitingListData[tableName] || []).filter(reg => reg.name !== playerName);
+        } else {
+          for (let table in waitingListData) {
+            waitingListData[table] = waitingListData[table].filter(reg => reg.name !== playerName);
+          }
+        }
+        saveWaitingListData();
+        renderWaitingListCards();
+        updateDisplayWindow();
+      }
+    }
+    
+function delayPlayer(playerName, tableName) {
+  let extra = prompt("Enter additional minutes to delay (numeric):", "10");
+  if (extra && !isNaN(extra)) {
+    const additionalMs = parseInt(extra) * 60 * 1000;
+    for (let table in waitingListData) {
+      waitingListData[table] = (waitingListData[table] || []).map(r => {
+        if (r.name === playerName && (r.type === 'called' || r.type === 'sms')) {
+          r.expiryTimestamp = (r.expiryTimestamp || r.timestamp + (120 * 60 * 1000)) + additionalMs;
+          r.delayed = true;
+          r.additionalMinutes = (r.additionalMinutes || 0) + parseInt(extra);
+        }
+        return r;
+      });
+    }
+  }
+  saveWaitingListData();
+  renderWaitingListCards();
+  updateDisplayWindow();
+}
+
+    function editPlayerWaiting(playerName, tableName) {
+      openEditWaitingModal(playerName, tableName);
+    }
+    function deletePlayerWaiting(playerName, tableName) {
+      if (confirm("Are you sure you want to delete " + playerName + " from the waiting list?")) {
+        if (tableName) {
+          waitingListData[tableName] = (waitingListData[tableName] || []).filter(reg => reg.name !== playerName);
+        } else {
+          for (let table in waitingListData) {
+            waitingListData[table] = waitingListData[table].filter(reg => reg.name !== playerName);
+          }
+        }
+        saveWaitingListData();
+        renderWaitingListCards();
+        updateDisplayWindow();
+      }
+    }
+    function checkWaitingListTimers() {
+      let changed = false;
+      const now = new Date().getTime();
+      for (let table in waitingListData) {
+        let initialLength = waitingListData[table].length;
+        waitingListData[table] = waitingListData[table].filter(reg => {
+          if (reg.type === 'inperson') return true;
+          const defaultExp = parseInt(document.getElementById("defaultExpiration").value) || 120;
+          const expiry = reg.expiryTimestamp || (reg.timestamp + defaultExp * 60 * 1000);
+          return expiry > now;
+        });
+        if (waitingListData[table].length < initialLength) {
+          changed = true;
+        }
+      }
+      if (changed) {
+        saveWaitingListData();
+        renderWaitingListCards();
+        updateDisplayWindow();
+      }
+    }
+    function displayWaitingList() {
+      if (displayWindow && !displayWindow.closed) {
+        displayWindow.close();
+      }
+      displayWindow = window.open("", "WaitingListDisplay", "width=800,height=600,menubar=no,toolbar=no");
+      if (displayWindow) {
+        updateDisplayWindow();
+      }
+    }
+    function updateDisplayWindow() {
+      if (!displayWindow || displayWindow.closed) return;
+      let html = `<html><head><title>Waiting List Display</title>
+        <style>
+          body { font-family: sans-serif; padding: 1rem; background-color: #f8f9fa; }
+          .container {
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: space-between;
+      gap: 20px;
+      overflow-x: auto;
+      width: 100%;
+    }
+          .table-card {
+      flex: 1 1 0;
+      min-width: 150px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      background-color: white;
+      margin-right: 10px;
+    }
+          h2 { margin-top: 0.5rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+          ul { list-style: none; padding-left: 0; }
+          li { padding: 0.5rem; border-bottom: 1px solid #eee; }
+          .reg-type { margin-left: 5px; }
+        </style>
+      </head><body>
+        <h1>Waiting Lists</h1><div class="container">`;
+              // Inject Table Change card
+              const changes = JSON.parse(localStorage.getItem("tableChanges")) || [];
+              if (changes.length) {
+                html += `<div class="table-card"><h2>Table Change</h2><ul>`;
+                changes.forEach(req => { html += `<li>${req.name} ${req.from} → ${req.to}</li>`; });
+                html += `</ul></div>`;
+              }
+      tables.forEach(table => {
+        let regs = waitingListData[table.name] || [];
+        if (regs.length > 0) {
+          html += `<div class="table-card"><h2>${table.name}</h2><ul>`;
+          regs.forEach((reg, index) => {
+            html += `<li>
+              ${index+1}- <strong>${reg.name}</strong>
+              <span class="reg-type">
+                ${reg.type === "inperson" ? "👤" : reg.type==="called" ? "📞" : reg.type==="sms" ? "💬" : ""}
+              </span>
+            </li>`;
+          });
+          html += `</ul></div>`;
+        }
+      });
+      html += `</div>
+</body></html>`;
+      displayWindow.document.open();
+      displayWindow.document.write(html);
+      displayWindow.document.close();
+    }
+    function resetWaitingListManager() {
+      if (confirm("Are you sure you want to reset all waiting lists?")) {
+        waitingListBackup = JSON.stringify(waitingListData);
+        waitingListData = {};
+        saveWaitingListData();
+        renderWaitingListCards();
+        updateDisplayWindow();
+        document.getElementById("undoBtn").classList.remove("hidden");
+      }
+    }
+    function undoResetWaitingList() {
+      if (waitingListBackup) {
+        waitingListData = JSON.parse(waitingListBackup);
+        saveWaitingListData();
+        renderWaitingListCards();
+        updateDisplayWindow();
+        waitingListBackup = null;
+        document.getElementById("undoBtn").classList.add("hidden");
+      }
+    }
+    function startWaitingListManager() {
+      if (Object.keys(waitingListData).length === 0) {
+        tables.forEach(t => {
+          waitingListData[t.name] = (drawResults[t.name] && drawResults[t.name].waiting)
+            ? drawResults[t.name].waiting.slice().map(reg => {
+              return {
+                ...reg,
+                type: "inperson",
+                timestamp: new Date().getTime(),
+                table: t.name,
+                delayed: false,
+                additionalMinutes: 0
+              };
+            })
+            : [];
+        });
+        saveWaitingListData();
+      }
+      renderWaitingListQuickButtons();
+      renderWaitingListCards();
+      if (!timerCheckInterval) {
+        timerCheckInterval = setInterval(checkWaitingListTimers, 60 * 1000);
+        checkWaitingListTimers();
+      }
+    }
+    window.addEventListener("beforeunload", function() {
+      if (timerCheckInterval) {
+        clearInterval(timerCheckInterval);
+      }
+      if (displayWindow && !displayWindow.closed) {
+        displayWindow.close();
+      }
+    });
+  
+// Added missing modal handler functions
+function confirmNewList() {
+  // Implement your logic for creating a new list here
+  closeNewListModal();
+}
+function closeNewListModal() {
+  document.getElementById('newListModal').style.display = 'none';
+}
+function confirmTableChange() {
+  // Implement your logic for adding table change request here
+  closeTableChangeModal();
+}
+function closeTableChangeModal() {
+  document.getElementById('tableChangeModal').style.display = 'none';
+}
+
+
+function openTableChangeModal() {
+  document.getElementById("tableChangeEntryModal").style.display = "flex";
+}
+function closeTableChangeModal() {
+  document.getElementById("tableChangeEntryModal").style.display = "none";
+}
+function updateToOptions() {
+  const fromVal = document.getElementById("changeFromSelect").value;
+  const toSelect = document.getElementById("changeToSelect");
+  const all = ["T1", "T2", "T3", "T4", "T5", "T6"];
+  toSelect.innerHTML = '<option value="">Select Table</option>' +
+    all.filter(t => t !== fromVal).map(t => `<option value="${t}">${t}</option>`).join("");
+}
+function confirmTableChangeEntry() {
+  const name = document.getElementById("changePlayerInput").value.trim();
+  const from = document.getElementById("changeFromSelect").value;
+  const to = document.getElementById("changeToSelect").value;
+  if (!name || !from || !to) {
+    alert("All fields are required.");
+    return;
+  }
+  const changes = JSON.parse(localStorage.getItem("tableChanges")) || [];
+  changes.push({ name, from, to });
+  localStorage.setItem("tableChanges", JSON.stringify(changes));
+  closeTableChangeModal();
+  renderWaitingListCards();
+  updateDisplayWindow(); // keep external window updated
+}
+
+
+function reorderPlayerPrompt(playerName, tableName) {
+  const newPos = prompt("Enter new position in the list (1 = top):");
+  const pos = parseInt(newPos);
+  if (!isNaN(pos) && pos > 0) {
+    reorderPlayer(playerName, tableName, pos - 1); // Convert to 0-based index
+  }
+}
+
+function reorderPlayer(playerName, tableName, newIndex) {
+  const list = waitingListData[tableName] || [];
+  const currentIndex = list.findIndex(p => p.name === playerName);
+  if (currentIndex === -1 || newIndex >= list.length) return;
+  const [player] = list.splice(currentIndex, 1);
+  list.splice(newIndex, 0, player);
+  saveWaitingListData();
+  renderWaitingListCards();
+  updateDisplayWindow();
+}
+
+</script>
+<!-- Fixed Add Table Modal -->
+<div class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" id="addTableModal">
+<div class="add-table-modal-content bg-white p-6 rounded-lg max-w-md w-full">
+<span class="modal-close absolute top-2 right-4 text-gray-600 text-xl font-bold cursor-pointer" onclick="closeAddTableModal()">×</span>
+<h2 class="text-xl font-semibold mb-4">Add Table</h2>
+<label class="block mb-1">Game Type:</label>
+<select class="w-full border rounded px-2 py-1 mb-3" id="newTableType">
+<option>NLH</option>
+<option>PLO</option>
+<option>MIX</option>
+<option>OTHER</option>
+</select>
+<label class="block mb-1">Small Blind:</label>
+<input class="w-full border rounded px-2 py-1 mb-3" id="newTableSmallBlind" type="number"/>
+<label class="block mb-1">Big Blind:</label>
+<input class="w-full border rounded px-2 py-1 mb-4" id="newTableBigBlind" type="number"/>
+<div class="flex justify-end gap-2">
+<button class="px-4 py-2 bg-gray-200 rounded" onclick="closeAddTableModal()">Cancel</button>
+<button class="px-4 py-2 bg-green-500 text-white rounded" onclick="confirmAddTable()">Add</button>
+</div>
+</div>
+</div>
+
+<!-- Table Change Modal -->
+<div id="tableChangeEntryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-lg max-w-md w-full">
+    <h2 class="text-xl font-bold mb-4">Add Table Change</h2>
+    <div class="space-y-4">
+      <div>
+        <label class="block mb-1">Player Name:</label>
+        <input id="changePlayerInput" type="text" class="w-full border rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block mb-1">From:</label>
+        <select id="changeFromSelect" onchange="updateToOptions()" class="w-full border rounded px-3 py-2">
+          <option value="">Select Table</option>
+          <option value="T1">T1</option>
+          <option value="T2">T2</option>
+          <option value="T3">T3</option>
+          <option value="T4">T4</option>
+          <option value="T5">T5</option>
+          <option value="T6">T6</option>
+        </select>
+      </div>
+      <div>
+        <label class="block mb-1">To:</label>
+        <select id="changeToSelect" class="w-full border rounded px-3 py-2">
+          <option value="">Select Table</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-4 flex justify-end gap-2">
+      <button onclick="closeTableChangeModal()" class="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+      <button onclick="confirmTableChangeEntry()" class="px-4 py-2 bg-green-500 text-white rounded">Add</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
